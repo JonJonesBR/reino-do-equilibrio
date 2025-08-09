@@ -11,7 +11,7 @@ Um jogo de cartas e decisões onde você é o monarca e deve equilibrar as quatr
 
 <br>
 
-![Screenshot do Jogo Reino do Equilíbrio]([https://i.imgur.com/uG9x14D.png](https://github.com/JonJonesBR/reino-do-equilibrio/blob/main/PREVIA_GAME.JPG?raw=true](https://raw.githubusercontent.com/JonJonesBR/reino-do-equilibrio/refs/heads/main/PREVIA_GAME.JPG))
+![Screenshot do Jogo Reino do Equilíbrio](https://github.com/JonJonesBR/reino-do-equilibrio/blob/main/PREVIA_GAME.JPG?raw=true](https://raw.githubusercontent.com/JonJonesBR/reino-do-equilibrio/refs/heads/main/PREVIA_GAME.JPG)
 _Uma prévia da interface do jogo._
 
 ---
