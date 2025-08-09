@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <!-- Viewport essencial para responsividade e para desabilitar o zoom do usuário -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Reino do Equilíbrio</title>
+    <!-- Tailwind CSS para estilização rápida -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* Importa fontes com estilo medieval e de leitura */
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;500;700&display=swap');
+
+        /* --- Configurações Globais --- */
+        html, body {
+            /* Garante que o corpo ocupe 100% da altura da tela */
+            height: 100%;
+            /* Evita barras de rolagem no nível da página */
+            overflow: hidden;
+            background-color: #181a1b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            color: #e8e6e3;
+            /* Fundo sutil e animado */
+            background-image:
+                radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* --- Container Principal --- */
+        .container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            /* Define uma largura máxima para o conteúdo principal, ideal para telas grandes */
+            max-width: 450px; 
+            position: relative;
+        }
+
+        /* --- Cabeçalho e Barra de Status (Estilo Reigns) --- */
+        .top-bar {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            width: 100%;
+            padding: 1rem;
+            flex-shrink: 0; /* Impede que a barra encolha */
+        }
+        .stat-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            /* Adiciona um pequeno padding para evitar que os ícones se toquem */
+            padding: 0 0.25rem;
+        }
+        .stat-icon {
+            /* clamp() é ótimo para fontes fluidas que se adaptam ao tamanho da tela */
+            font-size: clamp(1.5rem, 6vw, 2rem);
+            color: #e8e6e3;
+            transition: color 0.3s, transform 0.3s;
+        }
+        .stat-icon.danger { color: #e53e3e; transform: scale(1.2); }
+        .stat-icon.full { color: #38a169; transform: scale(1.2); }
+        /* AJUSTE: Reduzido o espaçamento entre os pontos */
+        .stat-dots { display: flex; gap: 3px; margin-top: 8px; }
+        .dot {
+            width: clamp(5px, 1.5vw, 7px); /* Levemente reduzido para telas pequenas */
+            height: clamp(5px, 1.5vw, 7px);
+            background-color: #4a5568;
+            border-radius: 50%;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        .dot.filled { background-color: #e8e6e3; }
+        .dot.danger { background-color: #e53e3e; }
+        .dot.full { background-color: #38a169; }
+        
+        /* Indicadores de efeito ao arrastar */
+        .effect-indicator {
+            position: absolute;
+            top: -15px;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .effect-indicator-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: white;
+            box-shadow: 0 0 8px white;
+        }
+
+        /* --- Informações do Monarca (Centro da tela) --- */
+        .reign-info { 
+            text-align: center; 
+            padding: 0.5rem 1rem; 
+            flex-shrink: 0; 
+        }
+        .monarch-name { 
+            font-family: 'Cinzel', serif; 
+            font-weight: 700; 
+            font-size: clamp(1.2rem, 5vw, 1.5rem); 
+        }
+        .monarch-extras {
+            min-height: 20px;
+            font-size: clamp(0.75rem, 2.5vw, 0.9rem);
+            color: #a0aec0;
+            font-style: italic;
+            margin-top: 4px;
+        }
+        .day-counter { 
+            font-size: clamp(0.8rem, 3vw, 1rem); 
+            color: #a0aec0; 
+            margin-top: 4px; 
+        }
+
+        /* --- Área do Jogo e Cartas --- */
+        #game-area {
+            flex-grow: 1; /* Faz esta área ocupar todo o espaço vertical restante */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            width: 100%;
+            min-height: 0; /* Truque de flexbox para evitar overflow */
+            padding: 1rem; /* Adiciona um respiro em volta da carta */
+        }
+        
+        /* AJUSTE RESPONSIVO CHAVE: Simplificação do dimensionamento da carta */
+        .card-wrapper {
+            position: absolute;
+            /* A carta ocupará a maior parte da largura, mas com um limite */
+            width: 90%;
+            max-width: 320px; 
+            /* A altura será determinada pela largura para manter a proporção */
+            aspect-ratio: 2 / 3; 
+            /* Garante que a carta não ultrapasse a altura da área de jogo */
+            max-height: 100%; 
+            touch-action: none; /* Otimiza a interação de toque */
+            will-change: transform, opacity; /* Otimiza a animação */
+        }
+        .card {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+            user-select: none;
+            background-color: #2d3748;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.1s;
+        }
+        .card:active { cursor: grabbing; }
+        .card.dragging { transform: scale(1.02); }
+        .card-portrait {
+            width: 100%;
+            height: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .portrait-svg {
+            width: 50%;
+            height: 50%;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+        }
+        .card-dialogue {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+        .character-name { 
+            font-family: 'Cinzel', serif; 
+            font-size: clamp(1rem, 4vw, 1.25rem); 
+            font-weight: 700; 
+            margin-bottom: 0.5rem; 
+        }
+        .card-text { 
+            font-size: clamp(0.9rem, 3.5vw, 1.1rem); 
+            line-height: 1.5; 
+            flex-grow: 1; 
+            display: flex; 
+            align-items: center; 
+        }
+
+        /* --- Texto da Escolha (Abaixo da carta) --- */
+        .choice-text-container {
+            width: 100%;
+            height: 50px; /* Altura fixa para consistência */
+            flex-shrink: 0;
+            text-align: center;
+            font-size: clamp(1rem, 4vw, 1.2rem);
+            font-weight: 500;
+            position: relative;
+            padding: 0 1rem; /* Evita que o texto encoste nas bordas */
+        }
+        #left-choice-text, #right-choice-text {
+            position: absolute;
+            width: 50%;
+            opacity: 0;
+            transition: opacity 0.2s;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        #left-choice-text { left: 1rem; text-align: left; }
+        #right-choice-text { right: 1rem; text-align: right; }
+
+        /* --- Modais --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(24, 26, 27, 0.9);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 100; backdrop-filter: blur(5px); animation: fadeIn 0.3s ease-out;
+            padding: 1rem; /* Adiciona padding para telas pequenas */
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-content {
+            background-color: #2d3748; padding: 2.5rem; border-radius: 12px;
+            text-align: center; max-width: 90%; width: 500px;
+            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.5);
+        }
+        .button {
+            transition: transform 0.2s, background-color 0.2s;
+            padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); border: none; cursor: pointer;
+            background-color: #4a5568; color: white;
+        }
+        .button:hover { background-color: #718096; transform: scale(1.05); }
+        
+        /* Estilos para Conquistas */
+        #achievements-list { max-height: 60vh; overflow-y: auto; margin-top: 1rem; }
+        .achievement-item {
+            padding: 0.5rem;
+            border-bottom: 1px solid #4a5568;
+            text-align: left;
+            opacity: 0.5;
+        }
+        .achievement-item.unlocked { opacity: 1; }
+        .achievement-title { font-weight: bold; }
+        .achievement-desc { font-style: italic; color: #a0aec0; }
+
+        /* Notificação de Conquista */
+        #achievement-toast {
+            position: fixed;
+            bottom: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #ecc94b;
+            color: #181a1b;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: bottom 0.5s ease-in-out;
+            z-index: 200;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Barra de Status Superior -->
+        <div class="top-bar">
+            <div class="stat-display">
+                <div id="igreja-effect" class="effect-indicator"></div>
+                <i id="igreja-icon" class="stat-icon fas fa-cross"></i>
+                <div id="igreja-dots" class="stat-dots"></div>
+            </div>
+            <div class="stat-display">
+                <div id="povo-effect" class="effect-indicator"></div>
+                <i id="povo-icon" class="stat-icon fas fa-users"></i>
+                <div id="povo-dots" class="stat-dots"></div>
+            </div>
+            <div class="stat-display">
+                <div id="exercito-effect" class="effect-indicator"></div>
+                <i id="exercito-icon" class="stat-icon fas fa-shield-halved"></i>
+                <div id="exercito-dots" class="stat-dots"></div>
+            </div>
+            <div class="stat-display">
+                <div id="tesouro-effect" class="effect-indicator"></div>
+                <i id="tesouro-icon" class="stat-icon fas fa-coins"></i>
+                <div id="tesouro-dots" class="stat-dots"></div>
+            </div>
+        </div>
+
+        <!-- Informações do Reinado -->
+        <div class="reign-info">
+            <div id="monarch-name" class="monarch-name"></div>
+            <div id="monarch-extras" class="monarch-extras"></div>
+            <div id="day-counter" class="day-counter"></div>
+        </div>
+
+        <!-- Área do Jogo -->
+        <div id="game-area"></div>
+
+        <!-- Texto da Escolha -->
+        <div class="choice-text-container">
+            <div id="left-choice-text"></div>
+            <div id="right-choice-text"></div>
+        </div>
+    </div>
+
+    <!-- Modais -->
+    <div id="game-over-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2 id="days-survived" class="monarch-name text-2xl mb-2"></h2>
+            <p id="game-over-reason" class="text-gray-400 mb-6"></p>
+            <button id="restart-button" class="button">Nova Dinastia</button>
+        </div>
+    </div>
+    <div id="start-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4 font-['Cinzel']">Reino do Equilíbrio</h2>
+            <p class="text-gray-400 mb-6">
+                Equilibre as quatro forças do reino. Deslize as cartas para tomar decisões. Se qualquer poder se esgotar ou acumular demais, seu reinado termina.
+            </p>
+            <div class="flex gap-4 justify-center">
+                <button id="new-dynasty-button" class="button">Nova Dinastia</button>
+                <button id="achievements-button" class="button">Feitos</button>
+            </div>
+        </div>
+    </div>
+    <div id="achievements-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4 font-['Cinzel']">Feitos da Dinastia</h2>
+            <div id="achievements-list"></div>
+            <button id="close-achievements-button" class="button mt-6">Voltar</button>
+        </div>
+    </div>
+
+    <!-- Notificação de Conquista -->
+    <div id="achievement-toast">Feito Desbloqueado!</div>
+
+    <script>
+        // ===================================================================================
+        // --- MÓDULO DE DADOS DO JOGO ---
+        // ===================================================================================
+        const monarchTraits = {
+            "Piedoso": { text: "Piedoso", effects: { igreja: 1.1 } },
+            "Temido": { text: "Temido", effects: { exercito: 1.2 } }
+        };
+
+        const monarchItems = {
+            "Cetro Dourado": { text: "Cetro Dourado (+ Tesouro)", effects: { tesouro: 1.1 } }
+        };
+
+        const achievements = {
+            "REINADO_LONGO": { title: "Reinado Duradouro", description: "Reine por 25 anos.", condition: (state) => state.day >= 25 },
+            "SANTO": { title: "O Santo", description: "Leve a Igreja ao poder máximo.", condition: (state) => state.stats.igreja >= 100 },
+            "TIRANO": { title: "O Tirano", description: "Seja deposto por um golpe militar.", condition: (state) => state.stats.exercito >= 100 },
+            "REI_DO_POVO": { title: "Rei do Povo", description: "Seja deposto em festa pelo povo.", condition: (state) => state.stats.povo >= 100 },
+            "FALENCIA": { title: "Falência", description: "Leve o reino à ruína financeira.", condition: (state) => state.stats.tesouro <= 0 },
+        };
+
+        const monarchNames = ["Artur", "Ricardo", "Henrique", "João", "Filipe", "Pedro", "Leonor", "Isabel", "Catarina"];
+        const monarchTitles = ["o Justo", "o Grande", "o Sábio", "o Bravo", "o Mártir", "o Insano", "a Magnífica", "a Cruel"];
+
+        const allCards = [
+            { id: 1, character: "O Bispo", color: "#b794f4", svg: `<path fill-rule="evenodd" clip-rule="evenodd" d="M16 2L18 2V4L20 4V6H18V9C18 10.1046 17.1046 11 16 11H15V13H17V15H15V22H13V15H11V13H13V11H12C10.8954 11 10 10.1046 10 9V6H8V4L10 4V2L12 2V4H14V2L16 2ZM14 6V9C14 8.44772 13.5523 8 13 8H12C11.4477 8 11 8.44772 11 9V6H14Z" fill="white"/>`, text: "O Bispo pede uma doação para construir uma nova catedral.", leftText: "Negar", rightText: "Doar", effects: { left: { igreja: -15, tesouro: 5 }, right: { igreja: 20, tesouro: -20, povo: -5, addTrait: "Piedoso" }}},
+            { id: 3, character: "O General", color: "#f56565", svg: `<path d="M19 4C19 3.44772 18.5523 3 18 3H9C8.44771 3 8 3.44772 8 4V14H19V4Z" fill="white"/><path d="M7 5C7 4.44772 6.55228 4 6 4H5C4.44772 4 4 4.44772 4 5V15C4 18.3137 6.68629 21 10 21H17V15H7V5Z" fill="white"/>`, text: "O exército exige mais fundos para armas.", leftText: "Negar", rightText: "Atender", effects: { left: { exercito: -15, tesouro: 5 }, right: { exercito: 20, tesouro: -20, addTrait: "Temido" }}},
+            { id: 4, character: "A Fazendeira", color: "#48bb78", svg: `<path d="M2 13.4521C2 13.198 2.19799 13 2.45205 13H5.54795C5.80201 13 6 13.198 6 13.4521V20.5479C6 20.802 5.80201 21 5.54795 21H2.45205C2.19799 21 2 20.802 2 20.5479V13.4521Z" fill="white"/><path d="M18 13.4521C18 13.198 18.198 13 18.4521 13H21.5479C21.802 13 22 13.198 22 13.4521V20.5479C22 20.802 21.802 21 21.5479 21H18.4521C18.198 21 18 20.802 18 20.5479V13.4521Z" fill="white"/><path d="M10 3.45205C10 3.19799 10.198 3 10.4521 3H13.5479C13.802 3 14 3.19799 14 3.45205V10.5479C14 10.802 13.802 11 13.5479 11H10.4521C10.198 11 10 10.802 10 10.5479V3.45205Z" fill="white"/>`, text: "Uma praga devastou as colheitas. O povo pede sua ajuda.", leftText: "Ajudar", rightText: "Ignorar", effects: { left: { povo: 20, tesouro: -15 }, right: { povo: -20 }}},
+            { id: 5, character: "O Mercador", color: "#ecc94b", svg: `<circle cx="12" cy="12" r="8" stroke="white" stroke-width="2"/><path d="M12 6V18" stroke="white" stroke-width="2"/><path d="M9 9L15 15" stroke="white" stroke-width="2"/>`, text: "Um mercador estrangeiro oferece um artefato antigo, o Cetro Dourado.", leftText: "Recusar", rightText: "Comprar", effects: { left: { tesouro: -5 }, right: { tesouro: -25, povo: -10, addItem: "Cetro Dourado" }}},
+        ];
+        
+        const eventCards = [
+            { id: 100, character: "EVENTO", color: "#e53e3e", svg: `<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="white"/>`, text: "A Grande Peste varre o reino, dizimando a população.", leftText: "Ok", rightText: "Ok", effects: { left: { povo: -40, igreja: -10 }, right: { povo: -40, igreja: -10 }}},
+        ];
+
+        // AJUSTE CHAVE: Reduzido o número de pontos para caber em telas menores
+        const TOTAL_DOTS = 10;
+
+        // ===================================================================================
+        // --- MÓDULO DE ESTADO DO JOGO ---
+        // ===================================================================================
+        let state = {
+            stats: { igreja: 50, povo: 50, exercito: 50, tesouro: 50 },
+            day: 1,
+            monarchInfo: { name: '', traits: [], items: [] },
+            currentCardData: null,
+            isDragging: false,
+            startX: 0,
+            currentX: 0,
+            cardElement: null,
+            achievements: {}
+        };
+
+        // ===================================================================================
+        // --- MÓDULO DE ÁUDIO (WEB AUDIO API) ---
+        // ===================================================================================
+        const audio = {
+            context: null, isInitialized: false, musicPlaying: false, musicTimeoutId: null,
+            noteFrequencies: { 'C3': 130.81, 'D3': 146.83, 'E3': 164.81, 'F3': 174.61, 'G3': 196.00, 'A3': 220.00, 'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'G4': 392.00, 'A5': 880.00 },
+            songbook: [
+                { name: "Royal Court", tempo: 400, notes: ['C4', null, 'G3', 'A3', null, 'F3', 'E3', null] },
+                { name: "Forest Path", tempo: 300, notes: ['G3', 'C4', 'D4', null, 'E4', 'D4', 'C4', null] },
+                { name: "Somber Reign", tempo: 600, notes: ['A3', 'E3', 'F3', null, 'D3', 'E3', null, null] },
+            ],
+            currentSong: null, noteIndex: 0,
+            async start() {
+                if (this.isInitialized) {
+                    if (this.context.state === 'suspended') await this.context.resume();
+                    if (!this.musicPlaying) this.startBackgroundMusic();
+                    return;
+                }
+                this.context = new (window.AudioContext || window.webkitAudioContext)();
+                this.isInitialized = true; this.startBackgroundMusic();
+            },
+            playNote(freq, duration, type = 'sine', volume = 0.2) {
+                if (!this.isInitialized) return;
+                const o = this.context.createOscillator(); const g = this.context.createGain();
+                o.type = type; o.frequency.setValueAtTime(freq, this.context.currentTime);
+                g.gain.setValueAtTime(volume, this.context.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.00001, this.context.currentTime + duration);
+                o.connect(g); g.connect(this.context.destination); o.start(0); o.stop(this.context.currentTime + duration);
+            },
+            stopAllAudio() {
+                if (this.musicTimeoutId) clearTimeout(this.musicTimeoutId);
+                this.musicTimeoutId = null; this.musicPlaying = false;
+            },
+            startBackgroundMusic() {
+                if (!this.isInitialized || this.musicPlaying) return;
+                this.stopAllAudio();
+                this.currentSong = this.songbook[Math.floor(Math.random() * this.songbook.length)];
+                this.noteIndex = 0; this.musicPlaying = true; this.scheduleNextNote();
+            },
+            scheduleNextNote() {
+                if (!this.musicPlaying) return;
+                const noteName = this.currentSong.notes[this.noteIndex];
+                if (noteName && this.noteFrequencies[noteName]) {
+                    this.playNote(this.noteFrequencies[noteName], this.currentSong.tempo / 1000 * 0.8, 'sine', 0.1);
+                }
+                this.noteIndex = (this.noteIndex + 1) % this.currentSong.notes.length;
+                this.musicTimeoutId = setTimeout(() => this.scheduleNextNote(), this.currentSong.tempo);
+            },
+            playSound(sound) {
+                if (!this.isInitialized) return;
+                if (sound === 'gameOver') { this.stopAllAudio(); this.playNote(this.noteFrequencies['A3'] / 2, 1.5, 'square'); } 
+                else if (sound === 'swipe') { this.playNote(this.noteFrequencies['A5'], 0.1, 'triangle'); }
+            }
+        };
+
+        // ===================================================================================
+        // --- MÓDULO DE UI ---
+        // ===================================================================================
+        const ui = {
+            elements: {
+                ...Object.fromEntries(['igreja', 'povo', 'exercito', 'tesouro'].flatMap(s => [
+                    [`${s}Icon`, document.getElementById(`${s}-icon`)], [`${s}Dots`, document.getElementById(`${s}-dots`)], [`${s}Effect`, document.getElementById(`${s}-effect`)]
+                ])),
+                monarchName: document.getElementById('monarch-name'), monarchExtras: document.getElementById('monarch-extras'), dayCounter: document.getElementById('day-counter'),
+                gameArea: document.getElementById('game-area'), leftChoiceText: document.getElementById('left-choice-text'), rightChoiceText: document.getElementById('right-choice-text'),
+                gameOverModal: document.getElementById('game-over-modal'), daysSurvived: document.getElementById('days-survived'), gameOverReason: document.getElementById('game-over-reason'),
+                restartButton: document.getElementById('restart-button'), startModal: document.getElementById('start-modal'), newDynastyButton: document.getElementById('new-dynasty-button'),
+                achievementsButton: document.getElementById('achievements-button'), achievementsModal: document.getElementById('achievements-modal'), achievementsList: document.getElementById('achievements-list'),
+                closeAchievementsButton: document.getElementById('close-achievements-button'), achievementToast: document.getElementById('achievement-toast')
+            },
+            init() {
+                ['igreja', 'povo', 'exercito', 'tesouro'].forEach(stat => {
+                    for (let i = 0; i < TOTAL_DOTS; i++) {
+                        const dot = document.createElement('div'); dot.className = 'dot'; this.elements[`${stat}Dots`].appendChild(dot);
+                    }
+                });
+            },
+            updateStats() {
+                for (const stat in state.stats) {
+                    const value = state.stats[stat]; const numFilledDots = Math.round((value / 100) * TOTAL_DOTS);
+                    const dots = this.elements[`${stat}Dots`].children; const icon = this.elements[`${stat}Icon`];
+                    icon.className = 'stat-icon fas';
+                    if (value <= 0) icon.classList.add('fa-skull-crossbones', 'danger');
+                    else if (value >= 100) icon.classList.add('fa-crown', 'full');
+                    else { const defaultIcons = { igreja: 'fa-cross', povo: 'fa-users', exercito: 'fa-shield-halved', tesouro: 'fa-coins' }; icon.classList.add(defaultIcons[stat]); }
+                    for (let i = 0; i < TOTAL_DOTS; i++) {
+                        dots[i].className = 'dot';
+                        if (i < numFilledDots) {
+                            dots[i].classList.add('filled');
+                            if (value <= 10) dots[i].classList.add('danger');
+                            if (value >= 90) dots[i].classList.add('full');
+                        }
+                    }
+                }
+            },
+            updateReignInfo() {
+                this.elements.monarchName.textContent = state.monarchInfo.name;
+                const extras = [
+                    ...state.monarchInfo.traits.map(t => monarchTraits[t].text),
+                    ...state.monarchInfo.items.map(i => monarchItems[i].text)
+                ];
+                this.elements.monarchExtras.textContent = extras.join(', ');
+                this.elements.dayCounter.textContent = `Ano ${state.day}`;
+            },
+            showEffectIndicators(effects) {
+                this.hideEffectIndicators();
+                for(const stat in effects) {
+                    if (state.stats.hasOwnProperty(stat)) {
+                        const container = this.elements[`${stat}Effect`]; container.style.opacity = '1';
+                        const dot = document.createElement('div'); dot.className = 'effect-indicator-dot'; container.appendChild(dot);
+                    }
+                }
+            },
+            hideEffectIndicators() {
+                ['igreja', 'povo', 'exercito', 'tesouro'].forEach(stat => {
+                    const container = this.elements[`${stat}Effect`]; container.innerHTML = ''; container.style.opacity = '0';
+                });
+            },
+            showChoiceText(card, direction) {
+                const choiceTextEl = direction === 'left' ? this.elements.leftChoiceText : this.elements.rightChoiceText;
+                const otherChoiceTextEl = direction === 'left' ? this.elements.rightChoiceText : this.elements.leftChoiceText;
+                choiceTextEl.textContent = card[`${direction}Text`]; choiceTextEl.style.opacity = 1; otherChoiceTextEl.style.opacity = 0;
+            },
+            hideChoiceText() { this.elements.leftChoiceText.style.opacity = 0; this.elements.rightChoiceText.style.opacity = 0; },
+            showModal(modal, show) { this.elements[modal].classList.toggle('hidden', !show); },
+            showAchievements() {
+                this.elements.achievementsList.innerHTML = '';
+                for (const key in achievements) {
+                    const achievement = achievements[key];
+                    const isUnlocked = state.achievements[key] ? state.achievements[key].unlocked : false;
+                    const item = document.createElement('div');
+                    item.className = `achievement-item ${isUnlocked ? 'unlocked' : ''}`;
+                    item.innerHTML = `<div class="achievement-title">${achievement.title}</div><div class="achievement-desc">${achievement.description}</div>`;
+                    this.elements.achievementsList.appendChild(item);
+                }
+                this.showModal('achievementsModal', true);
+            },
+            showAchievementToast(title) {
+                this.elements.achievementToast.textContent = `Feito: ${title}`;
+                this.elements.achievementToast.style.bottom = '20px';
+                setTimeout(() => { this.elements.achievementToast.style.bottom = '-100px'; }, 3000);
+            }
+        };
+
+        // ===================================================================================
+        // --- MÓDULO DE LÓGICA DO JOGO ---
+        // ===================================================================================
+        const game = {
+            init() {
+                ui.init();
+                this.loadAchievements();
+                ui.elements.newDynastyButton.addEventListener('click', () => { audio.start(); this.newGame(); });
+                ui.elements.restartButton.addEventListener('click', () => { audio.start(); this.newGame(); });
+                ui.elements.achievementsButton.addEventListener('click', () => ui.showAchievements());
+                ui.elements.closeAchievementsButton.addEventListener('click', () => ui.showModal('achievementsModal', false));
+                this.showStartScreen();
+            },
+            generateMonarchInfo() {
+                const name = monarchNames[Math.floor(Math.random() * monarchNames.length)];
+                const title = monarchTitles[Math.floor(Math.random() * monarchTitles.length)];
+                state.monarchInfo = { name: `${name} ${title}`, traits: [], items: [] };
+            },
+            newGame() {
+                state = { ...state, stats: { igreja: 50, povo: 50, exercito: 50, tesouro: 50 }, day: 1 };
+                this.generateMonarchInfo();
+                this.applyLegacy();
+                ui.showModal('gameOverModal', false); ui.showModal('startModal', false);
+                ui.updateStats(); ui.updateReignInfo(); this.loadNextCard();
+            },
+            showStartScreen() { ui.showModal('startModal', true); },
+            getGameOverReason() {
+                const { stats } = state;
+                if (stats.igreja <= 0) return { reason: "A Igreja o excomungou.", achievement: null };
+                if (stats.igreja >= 100) return { reason: "A Igreja tomou o poder.", achievement: "SANTO" };
+                if (stats.povo <= 0) return { reason: "O povo se revoltou.", achievement: null };
+                if (stats.povo >= 100) return { reason: "O povo o depôs em festa.", achievement: "REI_DO_POVO" };
+                if (stats.exercito <= 0) return { reason: "O reino foi invadido.", achievement: null };
+                if (stats.exercito >= 100) return { reason: "O exército deu um golpe.", achievement: "TIRANO" };
+                if (stats.tesouro <= 0) return { reason: "O reino faliu.", achievement: "FALENCIA" };
+                if (stats.tesouro >= 100) return { reason: "Você se afogou em ouro.", achievement: null };
+                return null;
+            },
+            checkGameOver() {
+                const gameOverData = this.getGameOverReason();
+                if (gameOverData) {
+                    audio.playSound('gameOver');
+                    if (gameOverData.achievement) this.unlockAchievement(gameOverData.achievement);
+                    this.createLegacy();
+                    ui.elements.daysSurvived.textContent = `${state.monarchInfo.name} reinou por ${state.day} anos.`;
+                    ui.elements.gameOverReason.textContent = gameOverData.reason;
+                    ui.showModal('gameOverModal', true);
+                    return true;
+                }
+                return false;
+            },
+            applyChoice(choice) {
+                const effects = state.currentCardData.effects[choice];
+                for (const stat in state.stats) {
+                    if (effects[stat]) {
+                        let change = effects[stat];
+                        state.monarchInfo.traits.forEach(t => { if (monarchTraits[t]?.effects[stat]) change = Math.round(change * monarchTraits[t].effects[stat]); });
+                        state.monarchInfo.items.forEach(i => { if (monarchItems[i]?.effects[stat]) change = Math.round(change * monarchItems[i].effects[stat]); });
+                        state.stats[stat] = Math.max(0, Math.min(100, state.stats[stat] + change));
+                    }
+                }
+                if (effects.addTrait && !state.monarchInfo.traits.includes(effects.addTrait)) state.monarchInfo.traits.push(effects.addTrait);
+                if (effects.addItem && !state.monarchInfo.items.includes(effects.addItem)) state.monarchInfo.items.push(effects.addItem);
+                
+                ui.updateStats(); ui.updateReignInfo();
+                this.checkAchievements();
+            },
+            loadNextCard(direction = 'right') {
+                if (state.cardElement) state.cardElement.remove();
+                
+                if (state.day > 10 && Math.random() < 0.1) {
+                    state.currentCardData = eventCards[Math.floor(Math.random() * eventCards.length)];
+                } else {
+                    let availableCards = allCards.filter(card => !card.prerequisites || Object.keys(card.prerequisites).every(stat => state.stats[stat] <= card.prerequisites[stat]));
+                    if (availableCards.length === 0) availableCards = allCards;
+                    state.currentCardData = availableCards[Math.floor(Math.random() * availableCards.length)];
+                }
+
+                const card = state.currentCardData;
+                state.cardElement = document.createElement('div');
+                state.cardElement.className = 'card-wrapper';
+                state.cardElement.style.transform = `translateX(${direction === 'left' ? '150%' : '-150%'})`;
+                state.cardElement.style.opacity = '0';
+                state.cardElement.innerHTML = `
+                    <div class="card">
+                        <div class="card-portrait" style="background-color: ${card.color};">
+                           <svg class="portrait-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">${card.svg || ''}</svg>
+                        </div>
+                        <div class="card-dialogue">
+                            <p class="character-name">${card.character}</p>
+                            <p class="card-text">${card.text}</p>
+                        </div>
+                    </div>`;
+                ui.elements.gameArea.appendChild(state.cardElement);
+                requestAnimationFrame(() => {
+                    state.cardElement.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s';
+                    state.cardElement.style.transform = 'translateX(0)';
+                    state.cardElement.style.opacity = '1';
+                });
+                state.cardElement.addEventListener('mousedown', (e) => interaction.dragStart(e));
+                state.cardElement.addEventListener('touchstart', (e) => interaction.dragStart(e), { passive: false });
+            },
+            loadAchievements() {
+                const saved = JSON.parse(localStorage.getItem('reigns_achievements'));
+                if (saved) {
+                    state.achievements = saved;
+                } else {
+                    for(const key in achievements) {
+                        state.achievements[key] = { unlocked: false };
+                    }
+                }
+            },
+            unlockAchievement(key) {
+                if (state.achievements[key] && !state.achievements[key].unlocked) {
+                    state.achievements[key].unlocked = true;
+                    localStorage.setItem('reigns_achievements', JSON.stringify(state.achievements));
+                    ui.showAchievementToast(achievements[key].title);
+                }
+            },
+            checkAchievements() {
+                for (const key in achievements) {
+                    if (state.achievements[key] && !state.achievements[key].unlocked && achievements[key].condition(state)) {
+                        this.unlockAchievement(key);
+                    }
+                }
+            },
+            createLegacy() {
+                let legacy = {};
+                if (state.stats.tesouro > 80) legacy.tesouro = 5;
+                if (state.stats.povo < 20) legacy.povo = -5;
+                localStorage.setItem('reigns_legacy', JSON.stringify(legacy));
+            },
+            applyLegacy() {
+                const legacy = JSON.parse(localStorage.getItem('reigns_legacy'));
+                if (legacy) {
+                    for (const stat in legacy) {
+                        state.stats[stat] += legacy[stat];
+                    }
+                    localStorage.removeItem('reigns_legacy');
+                }
+            }
+        };
+
+        // ===================================================================================
+        // --- MÓDULO DE INTERAÇÃO ---
+        // ===================================================================================
+        const interaction = {
+            dragStart(e) {
+                if (e.type === 'touchstart') e.preventDefault();
+                state.isDragging = true;
+                state.cardElement.querySelector('.card').classList.add('dragging');
+                state.startX = e.clientX || e.touches[0].clientX;
+                state.currentX = state.startX;
+                state.cardElement.style.transition = 'none';
+                document.addEventListener('mousemove', this.dragMove);
+                document.addEventListener('mouseup', this.dragEnd);
+                document.addEventListener('touchmove', this.dragMove, { passive: false });
+                document.addEventListener('touchend', this.dragEnd);
+            },
+            dragMove(e) {
+                if (!state.isDragging) return;
+                e.preventDefault();
+                state.currentX = e.touches ? e.touches[0].clientX : e.clientX;
+                const deltaX = state.currentX - state.startX;
+                state.cardElement.style.transform = `translateX(${deltaX}px) rotate(${deltaX / 20}deg)`;
+                const direction = deltaX < 0 ? 'left' : 'right';
+                const effects = state.currentCardData.effects[direction];
+                ui.showEffectIndicators(effects);
+                ui.showChoiceText(state.currentCardData, direction);
+            },
+            dragEnd() {
+                if (!state.isDragging) return;
+                state.isDragging = false;
+                state.cardElement.querySelector('.card').classList.remove('dragging');
+                ui.hideEffectIndicators(); ui.hideChoiceText();
+                document.removeEventListener('mousemove', interaction.dragMove);
+                document.removeEventListener('mouseup', interaction.dragEnd);
+                document.removeEventListener('touchmove', interaction.dragMove);
+                document.removeEventListener('touchend', interaction.dragEnd);
+
+                const deltaX = state.currentX - state.startX;
+                const swipeThreshold = state.cardElement.offsetWidth / 4;
+                const choice = deltaX < -swipeThreshold ? 'left' : (deltaX > swipeThreshold ? 'right' : null);
+                
+                if (choice) {
+                    audio.playSound('swipe');
+                    state.cardElement.style.transition = 'transform 0.3s, opacity 0.3s';
+                    state.cardElement.style.transform = `translateX(${choice === 'left' ? '-200%' : '200%'}) rotate(${choice === 'left' ? '-30deg' : '30deg'})`;
+                    state.cardElement.style.opacity = '0';
+                    
+                    setTimeout(() => {
+                        game.applyChoice(choice);
+                        if (!game.checkGameOver()) {
+                            state.day++;
+                            ui.updateReignInfo();
+                            game.loadNextCard(choice);
+                        }
+                    }, 300);
+                } else {
+                    state.cardElement.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                    state.cardElement.style.transform = 'translateX(0)';
+                }
+            }
+        };
+        interaction.dragMove = interaction.dragMove.bind(interaction);
+        interaction.dragEnd = interaction.dragEnd.bind(interaction);
+        
+        // --- Inicialização do Jogo ---
+        window.onload = () => game.init();
+    </script>
+</body>
+</html>
